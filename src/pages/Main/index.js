@@ -22,7 +22,10 @@ export default class Main extends Component {
   async componentDidMount() {
     this.setState({ loading: true });
 
-    this.setState({ loading: false, repositories: await this.getLocalRepositories() });
+    this.setState({
+      loading: false,
+      repositories: await this.getLocalRepositories(),
+    });
   }
 
   handleAddRepository = async (element) => {
@@ -31,18 +34,30 @@ export default class Main extends Component {
 
     this.setState({ loading: true });
     try {
-      const { data: repository } = await api.get(`/repos/${repositoryInput}`);
+      const isDuplicated = repositories.find(
+        (repository) => repository.full_name === repositoryInput,
+      );
 
-      repository.last_commit = moment(repository.pushed_at).fromNow();
+      if (isDuplicated) {
+        this.handleUpdateRepository(isDuplicated.id);
+      } else {
+        const { data: repository } = await api.get(`/repos/${repositoryInput}`);
 
-      repositories.push(repository);
-      this.setState({ repositoryInput: '', repositories, repositoryError: false });
+        repository.last_commit = moment(repository.pushed_at).fromNow();
 
-      const localRepositories = await this.getLocalRepositories();
+        repositories.push(repository);
+        this.setState({
+          repositoryInput: '',
+          repositories,
+          repositoryError: false,
+        });
 
-      localRepositories.push(repository);
+        const localRepositories = await this.getLocalRepositories();
 
-      await this.setLocalRepositories(localRepositories);
+        localRepositories.push(repository);
+
+        await this.setLocalRepositories(localRepositories);
+      }
     } catch (err) {
       this.setState({ repositoryError: true });
     } finally {
@@ -51,16 +66,18 @@ export default class Main extends Component {
   };
 
   setLocalRepositories = (localRepositories) => localStorage.setItem(
-    '@GitCompare:repositories',
-    JSON.stringify(localRepositories),
-  );
+      '@GitCompare:repositories',
+      JSON.stringify(localRepositories),
+    );
 
   getLocalRepositories = async () => JSON.parse(await localStorage.getItem('@GitCompare:repositories')) || [];
 
   handleRemoveRepository = async (id) => {
     const { repositories } = this.state;
 
-    const updatedRepositories = repositories.filter((repository) => repository.id !== id);
+    const updatedRepositories = repositories.filter(
+      (repository) => repository.id !== id,
+    );
 
     this.setState({ repositories: updatedRepositories });
 
@@ -80,7 +97,7 @@ export default class Main extends Component {
       this.setState({
         repositoryError: false,
         repositoryInput: '',
-        repositories: repositories.map((repo) => (repo.id === data.id ? data : repo)),
+        repositories: repositories.map((repo) => (repo.id === data.id ? data : repo),),
       });
 
       await this.setLocalRepositories(repositories);
@@ -91,7 +108,10 @@ export default class Main extends Component {
 
   render() {
     const {
-      repositories, repositoryInput, repositoryError, loading,
+      repositories,
+      repositoryInput,
+      repositoryError,
+      loading,
     } = this.state;
     return (
       <Container>
@@ -103,7 +123,9 @@ export default class Main extends Component {
             value={repositoryInput}
             onChange={(e) => this.setState({ repositoryInput: e.target.value })}
           />
-          <button type="submit">{loading ? <i className="fa fa-spinner fa-pulse" /> : 'Ok'}</button>
+          <button type="submit">
+            {loading ? <i className="fa fa-spinner fa-pulse" /> : 'Ok'}
+          </button>
         </Form>
 
         <CompareList
